@@ -296,25 +296,48 @@ def fig_style(fig, axes_list):
         ax.grid(color=DARK["grid"], alpha=0.3, linewidth=0.5)
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def cargar_df(ticker, meses=24):
+    import time
     fecha_fin    = datetime.now()
     fecha_inicio = fecha_fin - relativedelta(months=meses)
-    df = yf.download(
-        ticker,
-        start=fecha_inicio.strftime('%Y-%m-%d'),
-        end=fecha_fin.strftime('%Y-%m-%d'),
-        progress=False,
-        auto_adjust=True,
-    )
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
-    return df
+    for intento in range(4):
+        try:
+            if intento > 0:
+                time.sleep(intento * 3)
+            df = yf.download(
+                ticker,
+                start=fecha_inicio.strftime('%Y-%m-%d'),
+                end=fecha_fin.strftime('%Y-%m-%d'),
+                progress=False,
+                auto_adjust=True,
+            )
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            if not df.empty:
+                return df
+        except Exception as e:
+            if intento == 3:
+                raise e
+            time.sleep(2)
+    return pd.DataFrame()
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def cargar_info(ticker):
-    stock = yf.Ticker(ticker)
-    return stock.info
+    import time
+    for intento in range(4):
+        try:
+            if intento > 0:
+                time.sleep(intento * 3)
+            stock = yf.Ticker(ticker)
+            info  = stock.info
+            if info and len(info) > 5:
+                return info
+        except Exception as e:
+            if intento == 3:
+                raise e
+            time.sleep(2)
+    return {}
 
 
 def calcular_indicadores(df):
