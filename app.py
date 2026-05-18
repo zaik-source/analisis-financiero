@@ -296,20 +296,36 @@ def fig_style(fig, axes_list):
         ax.grid(color=DARK["grid"], alpha=0.3, linewidth=0.5)
 
 
+def _get_session():
+    import requests as _req
+    session = _req.Session()
+    session.headers.update({
+        'User-Agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/124.0.0.0 Safari/537.36'
+        ),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+    })
+    return session
+
 @st.cache_data(ttl=600, show_spinner=False)
 def cargar_df(ticker, meses=24):
     import time
     fecha_fin    = datetime.now()
     fecha_inicio = fecha_fin - relativedelta(months=meses)
+    session = _get_session()
     for intento in range(4):
         try:
             if intento > 0:
-                time.sleep(intento * 3)
-            df = yf.download(
-                ticker,
+                time.sleep(intento * 4)
+            tkr = yf.Ticker(ticker, session=session)
+            df  = tkr.history(
                 start=fecha_inicio.strftime('%Y-%m-%d'),
                 end=fecha_fin.strftime('%Y-%m-%d'),
-                progress=False,
                 auto_adjust=True,
             )
             if isinstance(df.columns, pd.MultiIndex):
@@ -319,24 +335,25 @@ def cargar_df(ticker, meses=24):
         except Exception as e:
             if intento == 3:
                 raise e
-            time.sleep(2)
+            time.sleep(3)
     return pd.DataFrame()
 
 @st.cache_data(ttl=600, show_spinner=False)
 def cargar_info(ticker):
     import time
+    session = _get_session()
     for intento in range(4):
         try:
             if intento > 0:
-                time.sleep(intento * 3)
-            stock = yf.Ticker(ticker)
+                time.sleep(intento * 4)
+            stock = yf.Ticker(ticker, session=session)
             info  = stock.info
             if info and len(info) > 5:
                 return info
         except Exception as e:
             if intento == 3:
                 raise e
-            time.sleep(2)
+            time.sleep(3)
     return {}
 
 
