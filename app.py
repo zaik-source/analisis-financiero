@@ -297,10 +297,9 @@ def fig_style(fig, axes_list):
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def cargar_datos(ticker, meses=24):
+def cargar_df(ticker, meses=24):
     fecha_fin    = datetime.now()
     fecha_inicio = fecha_fin - relativedelta(months=meses)
-    stock = yf.Ticker(ticker)
     df = yf.download(
         ticker,
         start=fecha_inicio.strftime('%Y-%m-%d'),
@@ -310,7 +309,12 @@ def cargar_datos(ticker, meses=24):
     )
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
-    return df, stock
+    return df
+
+@st.cache_data(ttl=300, show_spinner=False)
+def cargar_info(ticker):
+    stock = yf.Ticker(ticker)
+    return stock.info
 
 
 def calcular_indicadores(df):
@@ -735,12 +739,12 @@ if not analizar:
 # ── Carga de datos ──────────────────────────────────────────────
 with st.spinner(f"Descargando datos para {ticker_input}..."):
     try:
-        df_raw, stock = cargar_datos(ticker_input)
+        df_raw = cargar_df(ticker_input)
         if df_raw.empty:
             st.error(f"❌ No se encontraron datos para **{ticker_input}**. Verifica el símbolo.")
             st.stop()
+        info     = cargar_info(ticker_input)
         df       = calcular_indicadores(df_raw)
-        info     = stock.info
         niveles  = calcular_niveles(df)
         scores   = calcular_scores(info)
     except Exception as e:
